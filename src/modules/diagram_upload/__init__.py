@@ -1,0 +1,1 @@
+# Diagram upload module initialization
