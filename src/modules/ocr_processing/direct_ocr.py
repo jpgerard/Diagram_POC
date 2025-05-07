@@ -138,8 +138,14 @@ def process_direct_ocr(image_path):
     # Perform OCR processing with DocTR
     with st.spinner("Performing OCR with DocTR (this may take a moment)..."):
         try:
-            # Load the OCR model
-            predictor = load_ocr_model()
+            try:
+                # Load the OCR model
+                predictor = load_ocr_model()
+            except Exception as model_error:
+                st.error(f"Error loading OCR model: {str(model_error)}")
+                st.error("This may be due to compatibility issues between TensorFlow and DocTR.")
+                st.info("Try using a different OCR approach or check the test scripts for a working configuration.")
+                return None
             
             # Load the processed image using DocumentFile (exactly as in the test script)
             doc = DocumentFile.from_images([processed_path])
