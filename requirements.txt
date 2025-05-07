@@ -9,7 +9,7 @@ openai==1.12.0
 python-dotenv==1.0.0
 numpy==1.26.3
 python-doctr==0.7.0
-tensorflow==2.18.0
+tensorflow==2.15.0
 torch==2.3.0
 torchvision==0.18.0
 tf2onnx==1.15.1
