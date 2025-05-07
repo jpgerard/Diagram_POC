@@ -1,4 +1,13 @@
 import streamlit as st
+
+# Set page configuration - must be the first Streamlit command
+st.set_page_config(
+    page_title="Diagram to Requirements",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import os
 import time
 from dotenv import load_dotenv
@@ -35,14 +44,6 @@ try:
         st.sidebar.success("API key loaded from Streamlit secrets")
 except Exception as e:
     st.sidebar.warning(f"Note: {str(e)}")
-
-# Set page configuration
-st.set_page_config(
-    page_title="Diagram to Requirements",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Define the application state
 if 'current_step' not in st.session_state:
