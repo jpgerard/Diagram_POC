@@ -381,12 +381,6 @@ def generate_requirements_with_openai(nodes, edges, node_attributes, requirement
     from openai import OpenAI
     from datetime import datetime
     
-    # Get OpenAI API key from environment variables
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        st.warning("OpenAI API key not found. Using simulated requirements instead.")
-        return simulate_requirement_generation(nodes, edges, node_attributes, requirement_types, detail_level)
-    
     try:
         # Prepare the system diagram information
         system_info = {
@@ -461,8 +455,8 @@ def generate_requirements_with_openai(nodes, edges, node_attributes, requirement
         }}
         """
         
-        # Initialize the OpenAI client with default settings
-        client = OpenAI(api_key=api_key)
+        # Initialize the OpenAI client with Streamlit secrets
+        client = OpenAI(api_key=st.secrets["openai"]["api_key"])
         
         # Call the OpenAI API
         response = client.chat.completions.create(

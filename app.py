@@ -36,11 +36,10 @@ except ImportError:
 # Load environment variables
 load_dotenv()
 
-# For Streamlit Cloud: Use secrets if available
+# For Streamlit Cloud: Check if secrets are available
 try:
     # Check if we're running on Streamlit Cloud
     if 'openai' in st.secrets:
-        os.environ['OPENAI_API_KEY'] = st.secrets['openai']['api_key']
         st.sidebar.success("API key loaded from Streamlit secrets")
 except Exception as e:
     st.sidebar.warning(f"Note: {str(e)}")
