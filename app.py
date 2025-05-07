@@ -5,16 +5,32 @@ from dotenv import load_dotenv
 import json
 
 # Import modules
-from src.modules.diagram_upload.upload import process_upload
-from src.modules.diagram_upload.direct_upload import process_direct_upload
-from src.modules.ocr_processing.ocr import extract_text
-from src.modules.ocr_processing.enhanced_ocr import extract_text_enhanced
-from src.modules.ocr_processing.streamlined_ocr import streamlined_ocr_process
-from src.modules.ocr_processing.direct_ocr import process_direct_ocr
-from src.modules.graph_construction.graph_builder import build_graph
-from src.modules.requirement_generation.generator import generate_requirements
-from src.modules.review_edit.editor import display_requirements_editor
-from src.modules.export.exporter import export_to_json
+try:
+    # Try importing with relative imports for Streamlit Cloud
+    from modules.diagram_upload.upload import process_upload
+    from modules.diagram_upload.direct_upload import process_direct_upload
+    from modules.ocr_processing.ocr import extract_text
+    from modules.ocr_processing.enhanced_ocr import extract_text_enhanced
+    from modules.ocr_processing.streamlined_ocr import streamlined_ocr_process
+    from modules.ocr_processing.direct_ocr import process_direct_ocr
+    from modules.graph_construction.graph_builder import build_graph
+    from modules.requirement_generation.generator import generate_requirements
+    from modules.review_edit.editor import display_requirements_editor
+    from modules.export.exporter import export_to_json
+    st.sidebar.success("Using Streamlit Cloud imports")
+except ImportError:
+    # Fall back to local imports
+    from src.modules.diagram_upload.upload import process_upload
+    from src.modules.diagram_upload.direct_upload import process_direct_upload
+    from src.modules.ocr_processing.ocr import extract_text
+    from src.modules.ocr_processing.enhanced_ocr import extract_text_enhanced
+    from src.modules.ocr_processing.streamlined_ocr import streamlined_ocr_process
+    from src.modules.ocr_processing.direct_ocr import process_direct_ocr
+    from src.modules.graph_construction.graph_builder import build_graph
+    from src.modules.requirement_generation.generator import generate_requirements
+    from src.modules.review_edit.editor import display_requirements_editor
+    from src.modules.export.exporter import export_to_json
+    st.sidebar.success("Using local imports")
 
 # Load environment variables
 load_dotenv()
