@@ -461,7 +461,8 @@ def generate_requirements_with_openai(nodes, edges, node_attributes, requirement
         }}
         """
         
-        # Initialize the OpenAI client
+        # Initialize the OpenAI client with default settings
+        # Do not pass any additional parameters like proxies
         client = openai.OpenAI(api_key=api_key)
         
         # Call the OpenAI API
