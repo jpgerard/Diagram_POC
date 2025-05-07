@@ -378,7 +378,7 @@ def generate_requirements_with_openai(nodes, edges, node_attributes, requirement
         dict: A dictionary containing the generated requirements.
     """
     import os
-    import openai
+    from openai import OpenAI
     from datetime import datetime
     
     # Get OpenAI API key from environment variables
@@ -462,8 +462,8 @@ def generate_requirements_with_openai(nodes, edges, node_attributes, requirement
         """
         
         # Initialize the OpenAI client with default settings
-        # Do not pass any additional parameters like proxies
-        client = openai.OpenAI(api_key=api_key)
+        # Initialize the OpenAI client with default settings
+        client = OpenAI(api_key=api_key)
         
         # Call the OpenAI API
         response = client.chat.completions.create(
