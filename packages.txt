@@ -4,3 +4,8 @@ libsm6
 libxrender1
 libxext6
 libgomp1
+libpango-1.0-0
+libpangocairo-1.0-0
+libcairo2
+libharfbuzz0b
+libffi-dev
