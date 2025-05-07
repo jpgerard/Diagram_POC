@@ -464,9 +464,6 @@ def generate_requirements_with_openai(nodes, edges, node_attributes, requirement
         # Initialize the OpenAI client
         client = openai.OpenAI(api_key=api_key)
         
-        # Note: If you're behind a proxy, you might need to configure it differently
-        # The current version of the OpenAI Python client doesn't support the 'proxies' parameter
-        
         # Call the OpenAI API
         response = client.chat.completions.create(
             model="gpt-4",
