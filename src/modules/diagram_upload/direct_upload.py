@@ -36,7 +36,7 @@ def process_direct_upload():
             image = Image.open(uploaded_file)
             
             # Display the image
-            st.image(image, caption="Uploaded Diagram", use_container_width=True)
+            st.image(image, caption="Uploaded Diagram", width=None)
             
             # Create a unique filename to avoid overwriting
             timestamp = int(time.time())
@@ -64,19 +64,19 @@ def process_direct_upload():
         st.info("Using a sample diagram for demonstration purposes.")
         
         # Use the sample diagram from the project
-        sample_path = os.path.join("data", "sample_diagrams", "microservice_architecture.png")
+        sample_path = os.path.join("data", "sample_diagrams", "car-hud-decoding-hardware_preprocessed.png")
         
         # Check if the sample exists
         if os.path.exists(sample_path):
             # Load the sample image
             sample_image = Image.open(sample_path)
-            st.image(sample_image, caption="Sample Diagram", use_container_width=True)
+            st.image(sample_image, caption="Sample Diagram", width=None)
             st.success(f"Using sample image from {sample_path}")
             return sample_image, sample_path
         else:
             # Create a simple placeholder image
             sample_image = Image.new('RGB', (800, 600), color='white')
-            st.image(sample_image, caption="Sample Diagram", use_container_width=True)
+            st.image(sample_image, caption="Sample Diagram", width=None)
             
             # Save the sample image
             temp_dir = os.path.join("data", "temp")

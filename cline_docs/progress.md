@@ -61,4 +61,4 @@
 - **Advanced Features**: 🔄 Not Started
 
 ## Current Milestone
-Deploying the application to Streamlit Cloud and testing the prototype with real diagrams using the direct OCR approach that matches the test scripts.
+Deploying the application to Streamlit Cloud and testing the prototype with real diagrams using the direct OCR approach that matches the test scripts. Added car-hud-decoding-hardware_preprocessed.png as a sample diagram option and made UI adjustments for better Streamlit Cloud compatibility.

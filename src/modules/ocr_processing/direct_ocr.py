@@ -1,34 +1,72 @@
 import streamlit as st
 import cv2
 import numpy as np
-from doctr.io import DocumentFile
-from doctr.models import ocr_predictor
 from PIL import Image
 import os
 import time
 import pandas as pd
+import re
 
-# Load the OCR model once (outside the function to avoid reloading)
-@st.cache_resource
-def load_ocr_model():
+# Try to import DocTR, but provide a fallback if it fails
+try:
+    from doctr.io import DocumentFile
+    from doctr.models import ocr_predictor
+    DOCTR_AVAILABLE = True
+except Exception as e:
+    st.warning(f"DocTR import failed: {str(e)}")
+    DOCTR_AVAILABLE = False
+
+# Simple OCR function using OpenCV for text detection
+def simple_opencv_text_detection(image_path):
     """
-    Load the DocTR OCR model with caching to avoid reloading.
+    A simple text detection function using OpenCV.
+    This doesn't do actual OCR but can detect text regions.
     
+    Args:
+        image_path (str): Path to the image file
+        
     Returns:
-        doctr.models.ocr.OCRPredictor: The loaded OCR predictor.
+        list: List of detected text regions
     """
-    try:
-        # Try with default architectures
-        return ocr_predictor(det_arch='db_resnet50', reco_arch='crnn_vgg16_bn', pretrained=True)
-    except Exception as e:
-        # If that fails, try with simpler architectures
-        st.warning(f"Failed to load default OCR model: {str(e)}")
-        st.info("Trying with alternative model architectures...")
-        try:
-            return ocr_predictor(det_arch='db_mobilenet_v3_large', reco_arch='crnn_mobilenet_v3_small', pretrained=True)
-        except Exception as e2:
-            # If that also fails, raise the error
-            raise Exception(f"Failed to load OCR models: {str(e2)}. Original error: {str(e)}")
+    # Load image
+    img = cv2.imread(image_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # Apply preprocessing to enhance text
+    # 1. Apply bilateral filter to reduce noise while preserving edges
+    bilateral = cv2.bilateralFilter(gray, 9, 75, 75)
+    
+    # 2. Apply adaptive thresholding
+    thresh = cv2.adaptiveThreshold(
+        bilateral, 
+        255, 
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+        cv2.THRESH_BINARY, 
+        11,  # Block size
+        2    # Constant subtracted from mean
+    )
+    
+    # 3. Find contours
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # 4. Filter contours by size to find potential text regions
+    text_regions = []
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        # Filter by size (adjust these values based on your images)
+        if w > 20 and h > 10 and w < img.shape[1] * 0.9 and h < img.shape[0] * 0.9:
+            text_regions.append((x, y, w, h))
+    
+    # Draw text regions on a copy of the image
+    result_img = img.copy()
+    for (x, y, w, h) in text_regions:
+        cv2.rectangle(result_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    
+    # Save the result image
+    result_path = os.path.join(os.path.dirname(image_path), f"text_regions_{os.path.basename(image_path)}")
+    cv2.imwrite(result_path, result_img)
+    
+    return text_regions, result_img, result_path
 
 def process_direct_ocr(image_path):
     """
@@ -146,95 +184,168 @@ def process_direct_ocr(image_path):
     # Display the processed image
     st.image(processed_img, caption="Processed Image for OCR", use_container_width=True)
     
-    # Perform OCR processing with DocTR
-    with st.spinner("Performing OCR with DocTR (this may take a moment)..."):
-        try:
+    # Choose OCR method
+    ocr_method = st.radio(
+        "Select OCR method",
+        ["DocTR (Deep Learning OCR)", "OpenCV Text Detection (Fallback)"],
+        index=0,
+        help="DocTR provides better text recognition but may have compatibility issues. OpenCV provides basic text region detection."
+    )
+    
+    if ocr_method == "DocTR (Deep Learning OCR)" and DOCTR_AVAILABLE:
+        # Perform OCR processing with DocTR
+        with st.spinner("Performing OCR with DocTR (this may take a moment)..."):
             try:
-                # Load the OCR model
-                predictor = load_ocr_model()
-            except Exception as model_error:
-                st.error(f"Error loading OCR model: {str(model_error)}")
-                st.error("This may be due to compatibility issues between TensorFlow and DocTR.")
-                st.info("Try using a different OCR approach or check the test scripts for a working configuration.")
-                return None
-            
-            # Load the processed image using DocumentFile (exactly as in the test script)
-            doc = DocumentFile.from_images([processed_path])
-            
-            # Run OCR prediction
-            result = predictor(doc)
-            
-            # Extract text from the result
-            extracted_text = ""
-            confidence_scores = []
-            word_details = []
-            
-            # Process the DocTR result
-            for page_idx, page in enumerate(result.pages):
-                for block_idx, block in enumerate(page.blocks):
-                    for line_idx, line in enumerate(block.lines):
-                        line_text = ""
-                        for word_idx, word in enumerate(line.words):
-                            line_text += word.value + " "
-                            confidence_scores.append(word.confidence)
-                            word_details.append({
-                                "value": word.value,
-                                "confidence": word.confidence,
-                                "page_idx": page_idx,
-                                "block_idx": block_idx,
-                                "line_idx": line_idx,
-                                "word_idx": word_idx
-                            })
-                        extracted_text += line_text.strip() + "\n"
-            
-            # Clean up the extracted text
-            extracted_text = extracted_text.strip()
-            
-            # Check if any text was extracted
-            if not extracted_text.strip():
-                st.error("No text was extracted from the image. Try a different preprocessing method or a clearer image.")
-                return None
-            
-            # Display the extracted text
-            st.write("#### Extracted Text")
-            st.text_area("OCR Results", extracted_text, height=200)
-            
-            # Display confidence information
-            avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0
-            st.write(f"Average confidence score: {avg_confidence:.2f}")
-            
-            # Word details are collected but not displayed
-            
-            # Extract components from the text
-            components = extract_components(extracted_text)
-            
-            # Display the identified components
-            st.write("#### Identified Components")
-            if components:
-                for i, component in enumerate(components):
-                    st.write(f"Component {i+1}: {component['name']}")
-                    st.write(f"Type: {component['type']}")
-                    st.write(f"Description: {component['description']}")
-                    st.write("---")
-            else:
-                st.warning("No components were automatically identified. The OCR text may need manual processing.")
-            
-            # Create a dictionary with the extracted text and metadata
-            ocr_results = {
-                "text": extracted_text,
-                "components": components,
-                "confidence": avg_confidence,
-                "preprocessing_method": preprocessing_method,
-                "word_details": word_details,
-                "raw_detections": result.export()
-            }
-            
-            return ocr_results
+                # Define the load_ocr_model function locally
+                @st.cache_resource
+                def load_ocr_model():
+                    """
+                    Load the DocTR OCR model with caching to avoid reloading.
+                    
+                    Returns:
+                        doctr.models.ocr.OCRPredictor: The loaded OCR predictor.
+                    """
+                    try:
+                        # Try with default architectures
+                        return ocr_predictor(det_arch='db_resnet50', reco_arch='crnn_vgg16_bn', pretrained=True)
+                    except Exception as e:
+                        # If that fails, try with simpler architectures
+                        st.warning(f"Failed to load default OCR model: {str(e)}")
+                        st.info("Trying with alternative model architectures...")
+                        try:
+                            return ocr_predictor(det_arch='db_mobilenet_v3_large', reco_arch='crnn_mobilenet_v3_small', pretrained=True)
+                        except Exception as e2:
+                            # If that also fails, raise the error
+                            raise Exception(f"Failed to load OCR models: {str(e2)}. Original error: {str(e)}")
                 
-        except Exception as e:
-            st.error(f"Error during OCR processing: {str(e)}")
-            st.error("Please check that all required dependencies are installed.")
-            return None
+                try:
+                    # Load the OCR model
+                    predictor = load_ocr_model()
+                except Exception as model_error:
+                    st.error(f"Error loading OCR model: {str(model_error)}")
+                    st.error("This may be due to compatibility issues between TensorFlow and DocTR.")
+                    st.info("Try using the OpenCV Text Detection method instead.")
+                    # Switch to OpenCV method
+                    ocr_method = "OpenCV Text Detection (Fallback)"
+                
+                if ocr_method == "DocTR (Deep Learning OCR)":  # Still using DocTR
+                    # Load the processed image using DocumentFile
+                    doc = DocumentFile.from_images([processed_path])
+                    
+                    # Run OCR prediction
+                    result = predictor(doc)
+                    
+                    # Extract text from the result
+                    extracted_text = ""
+                    confidence_scores = []
+                    word_details = []
+                    
+                    # Process the DocTR result
+                    for page_idx, page in enumerate(result.pages):
+                        for block_idx, block in enumerate(page.blocks):
+                            for line_idx, line in enumerate(block.lines):
+                                line_text = ""
+                                for word_idx, word in enumerate(line.words):
+                                    line_text += word.value + " "
+                                    confidence_scores.append(word.confidence)
+                                    word_details.append({
+                                        "value": word.value,
+                                        "confidence": word.confidence,
+                                        "page_idx": page_idx,
+                                        "block_idx": block_idx,
+                                        "line_idx": line_idx,
+                                        "word_idx": word_idx
+                                    })
+                                extracted_text += line_text.strip() + "\n"
+                    
+                    # Clean up the extracted text
+                    extracted_text = extracted_text.strip()
+                    
+                    # Check if any text was extracted
+                    if not extracted_text.strip():
+                        st.error("No text was extracted from the image. Try a different preprocessing method or a clearer image.")
+                        return None
+                    
+                    # Display the extracted text
+                    st.write("#### Extracted Text")
+                    st.text_area("OCR Results", extracted_text, height=200)
+                    
+                    # Display confidence information
+                    avg_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0
+                    st.write(f"Average confidence score: {avg_confidence:.2f}")
+                    
+                    # Extract components from the text
+                    components = extract_components(extracted_text)
+                    
+                    # Display the identified components
+                    st.write("#### Identified Components")
+                    if components:
+                        for i, component in enumerate(components):
+                            st.write(f"Component {i+1}: {component['name']}")
+                            st.write(f"Type: {component['type']}")
+                            st.write(f"Description: {component['description']}")
+                            st.write("---")
+                    else:
+                        st.warning("No components were automatically identified. The OCR text may need manual processing.")
+                    
+                    # Create a dictionary with the extracted text and metadata
+                    ocr_results = {
+                        "text": extracted_text,
+                        "components": components,
+                        "confidence": avg_confidence,
+                        "preprocessing_method": preprocessing_method,
+                        "word_details": word_details,
+                        "raw_detections": result.export()
+                    }
+                    
+                    return ocr_results
+            except Exception as e:
+                st.error(f"Error during DocTR OCR processing: {str(e)}")
+                st.error("Falling back to OpenCV Text Detection method.")
+                ocr_method = "OpenCV Text Detection (Fallback)"
+    
+    # If DocTR is not available or failed, use OpenCV text detection
+    if ocr_method == "OpenCV Text Detection (Fallback)" or not DOCTR_AVAILABLE:
+        with st.spinner("Performing text detection with OpenCV..."):
+            try:
+                # Use OpenCV for text region detection
+                text_regions, result_img, result_path = simple_opencv_text_detection(processed_path)
+                
+                # Display the result image with text regions highlighted
+                st.image(result_img, caption="Detected Text Regions", use_container_width=True)
+                
+                # Create a simple text representation of the detected regions
+                extracted_text = f"Detected {len(text_regions)} potential text regions in the image.\n\n"
+                
+                for i, (x, y, w, h) in enumerate(text_regions):
+                    extracted_text += f"Region {i+1}: Position (x={x}, y={y}), Size (width={w}, height={h})\n"
+                
+                # Display the extracted text
+                st.write("#### Text Region Information")
+                st.text_area("Detection Results", extracted_text, height=200)
+                
+                st.info("Note: OpenCV text detection only identifies potential text regions without actual OCR. "
+                        "For full OCR functionality, please use a compatible version of DocTR or another OCR library.")
+                
+                # Create a dictionary with the extracted text and metadata
+                ocr_results = {
+                    "text": extracted_text,
+                    "components": [],  # No components identified
+                    "confidence": 0.0,  # No confidence score
+                    "preprocessing_method": preprocessing_method,
+                    "text_regions": text_regions,
+                    "result_image_path": result_path
+                }
+                
+                return ocr_results
+            except Exception as e:
+                st.error(f"Error during OpenCV text detection: {str(e)}")
+                st.error("Please check that all required dependencies are installed.")
+                return None
+    
+    # If we get here, something went wrong
+    st.error("No OCR method was successfully executed.")
+    return None
 
 def extract_components(text):
     """

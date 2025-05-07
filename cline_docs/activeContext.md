@@ -30,6 +30,8 @@ Completed the implementation of a prototype that demonstrates the full flow from
 - Added direct OCR processing that exactly matches the test script approach
 - Modified app.py to use the direct OCR module as the default
 - Fixed issues with requirements generation and display
+- Added car-hud-decoding-hardware_preprocessed.png as a sample diagram option
+- Updated direct_upload.py files to use width=None instead of use_container_width=True for better Streamlit Cloud compatibility
 
 ## Next Steps
 1. Deploy the application to Streamlit Cloud:
