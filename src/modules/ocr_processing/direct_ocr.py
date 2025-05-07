@@ -17,7 +17,18 @@ def load_ocr_model():
     Returns:
         doctr.models.ocr.OCRPredictor: The loaded OCR predictor.
     """
-    return ocr_predictor(det_arch='db_resnet50', reco_arch='crnn_vgg16_bn', pretrained=True)
+    try:
+        # Try with default architectures
+        return ocr_predictor(det_arch='db_resnet50', reco_arch='crnn_vgg16_bn', pretrained=True)
+    except Exception as e:
+        # If that fails, try with simpler architectures
+        st.warning(f"Failed to load default OCR model: {str(e)}")
+        st.info("Trying with alternative model architectures...")
+        try:
+            return ocr_predictor(det_arch='db_mobilenet_v3_large', reco_arch='crnn_mobilenet_v3_small', pretrained=True)
+        except Exception as e2:
+            # If that also fails, raise the error
+            raise Exception(f"Failed to load OCR models: {str(e2)}. Original error: {str(e)}")
 
 def process_direct_ocr(image_path):
     """
