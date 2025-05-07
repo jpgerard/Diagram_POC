@@ -42,7 +42,7 @@ def process_direct_ocr(image_path):
     try:
         # Load the image for display
         display_image = Image.open(image_path)
-        st.image(display_image, caption="Original Diagram", use_column_width=True)
+        st.image(display_image, caption="Original Diagram", use_container_width=True)
     except Exception as e:
         st.error(f"Error loading image for display: {str(e)}")
         return None
