@@ -1,0 +1,2 @@
+# requirement_generation package
+from src.modules.requirement_generation.generator import generate_requirements
